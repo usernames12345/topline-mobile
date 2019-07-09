@@ -8,11 +8,16 @@ Vue.use(Vuex)
 const store = new Vuex.Store({
   //  容器的状态（驱动视图更新的数据）
   state: {
-
+   // 初始化的时候从本地存储获取用户信息（里面欧token内容）
+   user: JSON.parse(window.localStorage.getItem('user'))
   },
   // 容器的methods 用来修改state的状态
   mutations: {
-
+    setUser (state, user) {
+      state.user = user
+      // 持久化到本地存储，防止页面数据丢失
+      window.localStorage.setItem('user',JSON.stringify(state.user))
+    }
   },
   actions: {
 
