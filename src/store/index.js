@@ -14,7 +14,7 @@ const store = new Vuex.Store({
   // 容器的methods 用来修改state的状态
   mutations: {
     setUser (state, user) {
-      state.user = user
+      state.usezar = user
       // 持久化到本地存储，防止页面数据丢失
       window.localStorage.setItem('user',JSON.stringify(state.user))
     }
