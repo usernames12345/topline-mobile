@@ -1,14 +1,15 @@
 <template>
   <div id='app'>
-    <router-view></router-view>
-    <p>APP  Component</p>
+    <Foo></Foo>
+    <Bar></Bar>
   </div>
 </template>
 
 <script>
 export default {
   name: 'APP',
-  components: {},
+  components: {
+  },
   data () {
     return {
 
@@ -18,5 +19,9 @@ export default {
 </script>
 
 <style lang="less" scoped>
-
+.com {
+  border:1px solid #000;
+  padding:10px;
+  margin-bottom: 20px;
+}
 </style>
