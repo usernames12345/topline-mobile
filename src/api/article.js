@@ -18,3 +18,31 @@ export const getArticles = ({
     }
   })
 }
+
+// 对文章不喜欢
+export const dislikeArticle = articleId => {
+  return request({
+    method: 'POST',
+    url: '/app/v1_0/article/dislikes',
+    data: {
+      target: articleId
+    }
+  })
+}
+
+// 举报文章
+export const reportArticle = ({
+  articleId,
+  type, // 举报类型  0-其他问题  1-标题夸张
+  remark // 其他问题 的附加说明
+}) => {
+  return request({
+    method: 'POST',
+    url: '/app/v1_0/article/reports',
+    data: {
+      target: articleId,
+      type: Number.parseInt(type),
+      remark
+    }
+  })
+}

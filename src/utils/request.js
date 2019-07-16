@@ -1,5 +1,6 @@
 import axios from 'axios'
 import store from '@/store'
+import JSONbig from 'json-bigint'
 /**
  * axios.create 用于创建一个axios实例 该实例的功能是一样的
  * 说白了就是克隆了一个axios
@@ -12,6 +13,18 @@ const request = axios.create({
   // baseURL: 'http://toutiao.course.itcast.cn'
   baseURL: 'http://ttapi.research.itcast.cn'
 })
+
+// 处理后端返回的数据中数字超出JavaScript 安全整数范围
+request.defaults.transformResponse = [function (data) {
+  try {
+    // 如果是json格式字符串 那就转换并返回给后续使用
+    return JSONbig.parse(data)
+  } catch (err) {
+    // 报错就意味着data不是json格式字符串这里就直接原样返回给后续使用
+    return data
+  }
+}]
+
 // Add a request interceptor
 request.interceptors.request.use(function (config) {
   // Do something before request is sent

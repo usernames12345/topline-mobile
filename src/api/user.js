@@ -17,3 +17,14 @@ export const login = ({ mobile, code }) => {
     }
   })
 }
+
+// 加入黑名单
+export const addBlacklist = userId => {
+  return request({
+    method: 'POST',
+    url: '/app/v1_0/user/blacklists',
+    data: {
+      target: userId
+    }
+  })
+}

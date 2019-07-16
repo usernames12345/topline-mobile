@@ -45,7 +45,34 @@
               v-for="item in channelItem.articles"
               :key="item.art_id"
               :title="item.title"
-            />
+            >
+            <div slot ="label">
+               <template v-if="item.cover.type">
+                <van-grid :border="false" :column-num="3">
+                  <van-grid-item v-for="(img,index) in item.cover.images" :key="index">
+                    <van-image :src="img" lazy-load/>
+                  </van-grid-item>
+                </van-grid>
+                </template>
+            <p >
+              <span>{{ item.aut_name }}</span>
+              &nbsp;
+              <span>{{ item.comm_count }}</span>
+              &nbsp;
+              <!-- relativeTime  就是在使用过滤器函数 -->
+              <!-- 过滤器函数接收的参数就是  |前面的 item.pubdate -->
+              <!--
+                过滤器说白了就是函数 在模板中调用函数的另一种方式
+                一般用于格式输出内容其中不会有太多业务逻辑 一般都是对字符串的格式化处理
+                过滤器可以定义到：
+                全局：Vue.filter('过滤器名称')可以在任何组件中使用
+                局部：filters 选项 只能在组件内部使用
+               -->
+              <span>{{  item.pubdate | relativeTime }}</span>
+              <van-icon class="close" name="close" @click="handleShowMoreAction(item)" />
+            </p>
+            </div>
+            </van-cell>
           </van-list>
         </van-pull-refresh>
       </van-tab>
@@ -70,7 +97,7 @@
       简单来说，给 props 数组加 .sync 其实就是 v-model 的作用
       只不过一个组件只能有一个 v-model
      -->
-    <!-- 
+    <!--
       :value="isChannelShow"
       @input="isChannelShow = $event"
       .sync 修饰符会自动监听一个事件
@@ -78,21 +105,41 @@
       只不过一个组件只能有一个v-model
      -->
     <!-- 频道组件 -->
-    <home-channel 
+    <home-channel
       v-model ='isChannelShow'
       :user-channels.sync="channels"
       :active-index.sync="activeChannelIndex"
     />
       <!-- @update:user-chanels="channels = $event" -->
-
+      <van-dialog
+          v-model="isMoreActionShow"
+          :show-confirm-button="false"
+          closeOnClickOverlay
+          :before-close="handleMoreActionClose"
+        >
+        <van-cell-group v-if="!toggleRubbish">
+           <van-cell title="不感兴趣" @click="handleDislick"/>
+           <van-cell title="反馈垃圾内容" is-link @click="toggleRubbish=true"/>
+           <van-cell title="拉黑作者" @click="handleAddBlacklist"></van-cell>
+        </van-cell-group>
+        <van-cell-group v-else>
+           <van-cell icon="arrow-left" @click="toggleRubbish=false"/>
+           <van-cell
+            v-for="item in reportTypes"
+            :key="item.label"
+            :title="item.label"
+            @click="handleReportArticle(item,value)"
+           />
+        </van-cell-group>
+    </van-dialog>
   </div>
 </template>
 
 <script>
 import { getUserChannels } from '@/api/channel'
-import { getArticles } from '@/api/article'
+import { getArticles, dislikeArticle, reportArticle } from '@/api/article'
 import HomeChannel from './components/channel'
-
+import { addBlacklist } from '@/api/user'
 export default {
   name: 'HomeIndex',
   components: {
@@ -106,7 +153,21 @@ export default {
       loading: false,
       finished: false,
       pullRefreshLoading: false,
-      isChannelShow: false // 控制频道面板的显示状态
+      isChannelShow: false, // 控制频道面板的显示状态
+      isMoreActionShow: false, // 控制弹框默认为false控制更多操作弹框的面板
+      currentArticle: null, // 存储操作更多的文章
+      toggleRubbish: false, // 控制反馈垃圾弹框内容的显示
+      reportTypes: [
+        { label: '标题夸张', value: '1' },
+        { label: '低俗色情', value: '2' },
+        { label: '错别字多', value: '3' },
+        { label: '旧闻重复', value: '4' },
+        { label: '广告软文', value: '5' },
+        { label: '内容不实', value: '6' },
+        { label: '涉嫌违法犯罪', value: '7' },
+        { label: '侵权', value: '8' },
+        { label: '其他问题', value: '0' }
+      ]
     }
   },
 
@@ -197,7 +258,7 @@ export default {
       // 无论如何，最后都关闭加载状态
       this.activeChannel.pullRefreshLoading = false
     },
-
+    // 加载文章频道
     async loadChannels () {
       let channels = []
       // 1. 得到频道数据
@@ -231,36 +292,7 @@ export default {
 
       this.channels = channels
     },
-
-    // async loadChannels () {
-    //   try {
-    //     let channels = []
-
-    //     const localChannels = window.localStorage.getItem('channels')
-
-    //     // 如果有本地存储的频道列表，则使用本地的
-    //     if (localChannels) {
-    //       channels = localChannels
-    //     } else {
-    //       channels = (await getUserChannels()).channels
-    //     }
-
-    //     // 对频道中的数据统一处理以供页面使用
-    //     channels.forEach(item => {
-    //       item.articles = [] // 频道的文章
-    //       item.timestamp = Date.now() // 用于下一页频道数据的时间戳
-    //       item.finished = false // 控制该频道上拉加载是否已加载完毕
-    //       item.upLoading = false // 控制该频道的下拉刷新 loading
-    //       item.pullRefreshLoading = false // 控制频道列表的下拉刷新状态
-    //       item.pullSuccessText = '' // 控制频道列表的下拉刷新成功提示文字
-    //     })
-
-    //     this.channels = channels
-    //   } catch (err) {
-    //     console.log(err)
-    //   }
-    // },
-
+    // 加载文章列表
     async loadArticles () {
       // 频道、时间戳
       const { id: channelId, timestamp } = this.activeChannel
@@ -285,6 +317,65 @@ export default {
       } catch (err) {
         console.log(err)
       }
+    },
+    // 点击❌更多操作
+    handleShowMoreAction (item) {
+      // 将点击操作更多的文章存储起来 用来后续使用
+      this.currentArticle = item
+      // 点击显示弹框
+      this.isMoreActionShow = true
+    },
+    // 对文章不喜欢
+    async handleDislick () {
+      // 获取当前操作文章的id
+      const articleId = this.currentArticle.art_id.toString()
+      // 使用接口发送请求
+      await dislikeArticle(articleId)
+      // 隐藏对话框
+      this.isMoreActionShow = false
+      // 当前频道文章列表
+      const articles = this.activeChannel.articles
+      // 找到不喜欢的文章
+      const delIndex = articles.findIndex(item => item.art_id.toString() === articleId)
+      // 把本条数据移除
+      articles.splice(delIndex, 1)
+      this.$toast('操作成功')
+    },
+    // 举报文章
+    
+    async handleReportArticle (type) {
+      try {
+        await reportArticle({
+          // 传入参数
+          articleId: this.currentArticle.art_id.toString(),
+          type,
+          remark: ''
+        })
+        this.isMoreActionShow = false
+        this.$toast('举报成功')
+      } catch (err) {
+        if (err.response.status === 409) {
+          this.$toast('该文章已被举报')
+        }
+      }
+    },
+    // 该函数会在关闭对话框的时候调用
+    //我们可以在这里加入一些关闭之前的逻辑
+    //如果设置了次函数 那么最后必须手动的done才会关闭对话框
+    handleMoreActionClose (action, done) {
+      // 瞬间关闭
+      done()
+      // 然后将里面的面板切换为初始状态
+      window.setTimeout(() => {
+        this.toggleRubbish = false
+      }, 500)
+    },
+    //拉黑作者
+    async handleAddBlacklist () {
+      //发送请求拉黑作者
+      await addBlacklist(this.currentArticle.aut_id)
+      this.isMoreActionShow = false
+      this.$toast('操作成功')
     }
   }
 }
@@ -314,5 +405,9 @@ export default {
   align-items: center;
   background: #fff;
   opacity: .7;
+}
+.channel-tabs .close {
+  float: right;
+  font-size: 30px;
 }
 </style>
