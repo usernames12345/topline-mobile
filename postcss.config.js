@@ -7,9 +7,8 @@
  * autoprefixer 用来处理样式兼容前缀用的 不用谢兼容前缀
  * postcss-pxtorem用来将px转成rem用的
  * const { sep } = require('path')
- * 
+ *
  */
-
 
 const { sep } = require('path')
 
